@@ -5,8 +5,7 @@ Two .NET 8 applications in one solution:
 * **GameCubeAppStore.Server** – ASP.NET Core Minimal API, ASP.NET Core Identity (bearer tokens),
   EF Core / SQLite and private disk-backed upload storage.
 * **GameCubeAppStore.Console** – DolphinDotNet GameCube executable with an
-  anonymous HTTP catalog client and a reflection-free JSON parser. The graphical
-  storefront is intentionally pending approval of its mockup.
+  anonymous HTTP catalog client and a reflection-free JSON parser. The graphical storefront follows the approved 960×720 teal/orange mockup.
 
 DolphinDotNet is pinned as a Git submodule under `external/DolphinDotNet`.
 This matches its current SDK imports and avoids pretending it is a NuGet package.
@@ -66,9 +65,7 @@ HTTP-only public catalog origin** before building the DOL.
 Configure Dolphin's GameCube BBA interface and network reachability. Current
 DolphinDotNet does not support HTTPS / System.Text.Json; HTTP + its JsonReader
 are intentional. Its parser accepts at most 65,536 bytes of JSON. Keep public
-catalog payloads bounded. The GameCube catalog and screenshot download
-methods are present, but the controller-driven graphics layout, screenshot
-presentation and software installation are **not yet implemented**.
+catalog payloads bounded. The controller-driven storefront and screenshot browsing are implemented. GameCube-side installation and download management are **not yet implemented**.
 
 **Deployment boundary:** do not expose `/account` or `/api/developer` over
 cleartext HTTP. Use HTTPS for the developer website and authentication, and
@@ -78,8 +75,7 @@ Hosting the server directly over plain HTTP is for isolated development only.
 
 ## Status
 
-This is a backend and console networking foundation, not a completed app
-store. Developer website and GameCube graphical UI require approved mockups.
+The developer portal is served at the API root (same-origin sign-in and management UI). The GameCube front end supports controller navigation, title/rating/details browsing and screenshot preview. Native builds are validated in CI, but hardware BBA execution has not been verified.
 Production deployment additionally requires database migrations, monitored
 storage/backups, external identity verification / account moderation and
 file/security scanning before accepting untrusted public submissions.

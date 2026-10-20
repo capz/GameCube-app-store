@@ -29,7 +29,6 @@ internal sealed class StoreScreen : IDisposable
     private CatalogDetailData? detail;
     private int menu,selected,scroll,focus;
     private bool viewingDetail;
-    private long lastX;
     private static readonly string[] Categories =
         { "FEATURED", "NEW RELEASES", "TOP RATED", "ALL SOFTWARE" };
 

@@ -9,6 +9,7 @@ const state = {
   email: sessionStorage.getItem('gc_email') || '',
   software: [], selected: null, creating: false, flash: '', error: false, busy: false
 };
+const previews = new Map();
 const nav = [
   ['overview','Overview'], ['software','My software'], ['releases','Releases'],
   ['media','Media library'], ['account','Account']
@@ -18,7 +19,7 @@ function esc(value) {
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 function safeAsset(url) {
-  return /^\/api\/assets\/[a-f0-9-]{36}$/i.test(url || '') ? url : '/assets/software.svg';
+  return /^\/api\/assets\/[a-f0-9-]{36}$/i.test(url || '') ? (previews.get(url) || url) : '/assets/software.svg';
 }
 function notice(message, error) {
   state.flash = message;
@@ -67,13 +68,29 @@ function signOut(redraw) {
   sessionStorage.removeItem('gc_token');
   sessionStorage.removeItem('gc_refresh');
   sessionStorage.removeItem('gc_email');
+  for (const url of previews.values()) URL.revokeObjectURL(url);
+  previews.clear();
   if (redraw !== false) render();
+}
+async function hydrateAssets() {
+  const paths = state.software.filter(s => !s.isPublished).map(s => s.coverUrl)
+    .concat(state.selected && !state.selected.isPublished && state.selected.screenshotFiles
+      ? state.selected.screenshotFiles.map(s => s.url) : []);
+  await Promise.all(Array.from(new Set(paths.filter(p => /^\/api\/assets\/[a-f0-9-]{36}$/i.test(p || '') && !previews.has(p))))
+    .map(async p => {
+      try {
+        const response = await fetch(p, {headers:{Authorization:'Bearer '+state.token},cache:'no-store'});
+        if (response.ok) previews.set(p,URL.createObjectURL(await response.blob()));
+      } catch (_) { /* Preview is optional; upload remains accessible through API. */ }
+    }));
 }
 async function loadSoftware() {
   state.software = await api('/api/developer/software');
+  await hydrateAssets();
 }
 async function openSoftware(id) {
   state.selected = await api('/api/developer/software/'+encodeURIComponent(id));
+  await hydrateAssets();
   state.creating = false;
   state.page = 'detail';
   state.flash = '';
@@ -138,7 +155,7 @@ function releaseTable(releases) {
   return releases.length ? '<div class="table-wrap"><table><thead><tr><th>Version</th><th>Uploaded</th><th>File</th><th></th></tr></thead><tbody>'
     +releases.map(r=>'<tr><td><strong>'+esc(r.version)+'</strong><div class="muted">'+esc(r.releaseNotes||'')+'</div></td>'
       +'<td>'+esc(new Date(r.uploadedAtUtc).toLocaleDateString())+'</td>'
-      +'<td><a href="'+safeAsset(r.downloadUrl)+'">Download</a> ('+Math.round(r.sizeBytes/1024)+' KB)</td>'
+      +'<td><button class="secondary small" data-download="'+esc(r.downloadUrl)+'" data-filename="'+esc(r.fileName||r.version+'.dol')+'">Download</button> ('+Math.round(r.sizeBytes/1024)+' KB)</td>'
       +'<td><button class="secondary small danger" data-remove-release="'+esc(r.id)+'">Remove</button></td></tr>').join('')
     +'</tbody></table></div>' : '<p class="muted">No releases uploaded yet.</p>';
 }
@@ -215,6 +232,7 @@ async function refresh() {
     const id = state.selected.id;
     state.selected = await api('/api/developer/software/'+encodeURIComponent(id));
   }
+  await hydrateAssets();
   render();
 }
 function setBusy(b) {
@@ -231,13 +249,27 @@ async function action(name,el) {
     await refresh(); notice(name==='publish'?'Software is now published.':'Software is now a draft.');
   }
 }
+async function downloadAsset(path,name) {
+  if (!/^\/api\/assets\/[a-f0-9-]{36}$/i.test(path || '')) throw Error('Invalid download path.');
+  const response = await fetch(path, {headers:{Authorization:'Bearer '+state.token}});
+  if (!response.ok) throw Error('Download unavailable ('+response.status+').');
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = name || 'download.dol';
+  document.body.appendChild(anchor);
+  anchor.click();anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
 document.addEventListener('click',async ev=>{
-  const el=ev.target.closest('button[data-action],button[data-nav],button[data-manage],button[data-remove-release],button[data-remove-shot]');
+  const el=ev.target.closest('button[data-action],button[data-nav],button[data-manage],button[data-remove-release],button[data-remove-shot],button[data-download]');
   if (!el) return;
   try {
     const dest=el.dataset.nav, manage=el.dataset.manage;
     if (dest) { state.page=dest; state.creating=false;state.selected=null;state.flash='';render();return; }
     if (manage) {await openSoftware(manage);return;}
+    if (el.dataset.download) {await downloadAsset(el.dataset.download,el.dataset.filename);return;}
     if (el.dataset.action) {await action(el.dataset.action,el);return;}
     if (!state.selected || state.busy) return;
     const releaseId=el.dataset.removeRelease,shotId=el.dataset.removeShot;

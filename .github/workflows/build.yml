@@ -2,7 +2,7 @@ name: Build .NET 8 storefront
 
 on:
   push:
-    branches: [main, "feature/**"]
+    branches: [main]
   pull_request:
 
 jobs:

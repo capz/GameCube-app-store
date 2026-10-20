@@ -43,7 +43,7 @@ internal sealed class CatalogDetailData
 }
 
 /// <summary>Small, read-only HTTP API designed for DolphinDotNet's limited APIs.</summary>
-internal sealed class CatalogClient : IDisposable
+internal sealed class CatalogClient
 {
     private readonly HttpClient http = new HttpClient();
     private readonly string origin;
@@ -94,7 +94,6 @@ internal sealed class CatalogClient : IDisposable
         return data.ToArray();
     }
 
-    public void Dispose()=>http.Dispose();
 
     private static List<CatalogItem> ParseCatalog(string json)
     {

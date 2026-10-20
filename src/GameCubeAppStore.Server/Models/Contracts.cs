@@ -15,7 +15,7 @@ public sealed record CatalogDetail(
 public sealed record ReleaseEntry(
     Guid Id, string Version, string ReleaseNotes, string DownloadUrl,
     string Sha256, long SizeBytes, DateTime UploadedAtUtc,
-    DateTime LastUpdatedAtUtc);
+    DateTime LastUpdatedAtUtc, string FileName);
 
 public sealed record SoftwareInput(string Title, string Description, string Category);
 public sealed record RatingInput(int Stars);

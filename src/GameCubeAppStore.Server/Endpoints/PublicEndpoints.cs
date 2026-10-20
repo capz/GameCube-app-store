@@ -117,6 +117,6 @@ public static class PublicEndpoints
             s.Releases.OrderByDescending(r => r.UploadedAtUtc).Take(20)
                 .Select(r => new ReleaseEntry(r.Id, r.Version, r.ReleaseNotes,
                     "/api/assets/" + r.FileId, r.File.Sha256, r.File.SizeBytes,
-                    r.UploadedAtUtc, r.LastUpdatedAtUtc)).ToArray());
+                    r.UploadedAtUtc, r.LastUpdatedAtUtc, r.File.OriginalName)).ToArray());
     }
 }

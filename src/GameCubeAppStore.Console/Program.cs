@@ -15,7 +15,7 @@ internal static class Program
         {
             DebugOverlay.WriteLine("GAMECUBE APP STORE - NETWORK STARTUP");
             await NetworkRuntime.StartAsync(new NetworkOptions(),CancellationToken.None);
-            using var client=new CatalogClient(StoreSettings.PublicCatalogOrigin);
+            var client=new CatalogClient(StoreSettings.PublicCatalogOrigin);
             using var draw=new Draw2D(GraphicsDevice.Default,
                 new Draw2DOptions{Width=960,Height=720});
             using var text=new SampleText();
