@@ -90,9 +90,8 @@ internal sealed class StoreScreen : IDisposable
         {
             shown.Sort((a,b)=>
             {
-                int ratings=a.RatingValue>b.RatingValue?-1:a.RatingValue<b.RatingValue?1:0;
-                return ratings!=0?ratings:a.RatingCount>b.RatingCount?-1:
-                    a.RatingCount<b.RatingCount?1:0;
+                var ratings=b.RatingValue.CompareTo(a.RatingValue);
+                return ratings==0?b.RatingCount.CompareTo(a.RatingCount):ratings;
             });
         }
         else if(menu==3) shown.Sort((a,b)=>string.Compare(a.Title,b.Title,StringComparison.OrdinalIgnoreCase));

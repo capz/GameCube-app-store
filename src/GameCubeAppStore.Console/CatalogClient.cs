@@ -64,8 +64,8 @@ internal sealed class CatalogClient
 
     public async Task<CatalogDetailData> GetDetailAsync(string id,CancellationToken cancellationToken)
     {
-        if(!Guid.TryParse(id,out var parsed))throw new ArgumentException("Invalid software ID.");
-        using var response=await http.GetAsync(origin+"/api/catalog/"+parsed.ToString(),cancellationToken);
+        if(!IsValidId(id))throw new ArgumentException("Invalid software ID.");
+        using var response=await http.GetAsync(origin+"/api/catalog/"+id,cancellationToken);
         response.EnsureSuccessStatusCode();
         var json=await response.Content.ReadAsStringAsync();
         return ParseDetail(json);
@@ -74,7 +74,7 @@ internal sealed class CatalogClient
     public async Task<byte[]> GetScreenshotAsync(string relativeUrl,CancellationToken cancellationToken)
     {
         if(!relativeUrl.StartsWith("/api/assets/",StringComparison.Ordinal) ||
-            !Guid.TryParse(relativeUrl.Substring("/api/assets/".Length),out _))
+            !IsValidId(relativeUrl.Substring("/api/assets/".Length)))
             throw new ArgumentException("Invalid screenshot URL.");
         // Screenshots may exceed the HttpClient 64 KiB buffered-response default.
         // Use a bounded streaming read instead of GetByteArrayAsync.
@@ -94,6 +94,18 @@ internal sealed class CatalogClient
         return data.ToArray();
     }
 
+
+    private static bool IsValidId(string value)
+    {
+        if(value.Length!=36)return false;
+        for(int i=0;i<value.Length;i++)
+        {
+            char c=value[i];
+            if(i==8||i==13||i==18||i==23){if(c!='-')return false;}
+            else if(!((c>='0'&&c<='9')||(c>='a'&&c<='f')||(c>='A'&&c<='F')))return false;
+        }
+        return true;
+    }
 
     private static List<CatalogItem> ParseCatalog(string json)
     {
@@ -155,7 +167,7 @@ internal sealed class CatalogClient
             {
                 var image=reader.Value;
                 if(image.StartsWith("/api/assets/",StringComparison.Ordinal)
-                    &&Guid.TryParse(image.Substring(12),out _)
+                    &&IsValidId(image.Substring("/api/assets/".Length))
                     &&detail.Screenshots.Count<8)detail.Screenshots.Add(image);
             }
             else if(area==2&&reader.TokenType==JsonTokenType.StartObject)
