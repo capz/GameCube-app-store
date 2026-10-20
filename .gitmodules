@@ -1,0 +1,3 @@
+[submodule "external/DolphinDotNet"]
+	path = external/DolphinDotNet
+	url = https://github.com/capz/DolphinDotNet.git

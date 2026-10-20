@@ -1,0 +1,21 @@
+name: Build .NET 8 foundation
+
+on:
+  push:
+    branches: [main, "feature/**"]
+  pull_request:
+
+jobs:
+  build-managed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore
+        run: dotnet restore GameCubeAppStore.sln
+      - name: Build API and GameCube managed assembly
+        run: dotnet build GameCubeAppStore.sln -c Release --no-restore -p:DndBuildNative=false
