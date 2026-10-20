@@ -2,38 +2,34 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Dolphin.Diagnostics;
+using Dolphin.Graphics;
 using Dolphin.Network;
 
 namespace GameCubeAppStore.Console;
 
-/// <summary>
-/// First-stage connectivity harness. The storefront screen awaits visual approval.
-/// </summary>
 internal static class Program
 {
     private static async Task<int> Main()
     {
-        DebugOverlay.WriteLine("GAMECUBE APP STORE");
-        DebugOverlay.WriteLine("Starting network...");
         try
         {
-            await NetworkRuntime.StartAsync(new NetworkOptions(), CancellationToken.None);
-            using var catalog = new CatalogClient(StoreSettings.PublicCatalogOrigin);
-            var items = await catalog.ListAsync(CancellationToken.None);
-            DebugOverlay.WriteLine("CATALOG ENTRIES: " + items.Count);
-            for (int i = 0; i < items.Count && i < 8; i++)
-                DebugOverlay.WriteLine(items[i].Title + "  " + items[i].Version);
-            return 0;
+            DebugOverlay.WriteLine("GAMECUBE APP STORE - NETWORK STARTUP");
+            await NetworkRuntime.StartAsync(new NetworkOptions(),CancellationToken.None);
+            using var client=new CatalogClient(StoreSettings.PublicCatalogOrigin);
+            using var draw=new Draw2D(GraphicsDevice.Default,
+                new Draw2DOptions{Width=960,Height=720});
+            using var text=new SampleText();
+            using var screen=new StoreScreen(client,draw,text);
+            return screen.Run();
         }
-        catch (Exception ex)
+        catch(Exception error)
         {
-            DebugOverlay.WriteLine("STORE CONNECTION FAILED");
-            DebugOverlay.WriteLine(ex.Message);
+            DebugOverlay.WriteLine("STORE FAILED: "+error.Message);
             return 1;
         }
         finally
         {
-            if (NetworkRuntime.IsReady) NetworkRuntime.Stop();
+            if(NetworkRuntime.IsReady)NetworkRuntime.Stop();
         }
     }
 }

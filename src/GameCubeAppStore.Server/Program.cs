@@ -28,6 +28,8 @@ builder.Services.AddIdentityApiEndpoints<DeveloperUser>(options =>
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -36,7 +38,7 @@ app.UseAuthorization();
 app.MapGroup("/account").MapIdentityApi<DeveloperUser>();
 app.MapPublicEndpoints();
 app.MapDeveloperEndpoints();
-app.MapGet("/", () => Results.Ok(new
+app.MapGet("/api/health", () => Results.Ok(new
 {
     name = "GameCube App Store API",
     catalog = "/api/catalog",

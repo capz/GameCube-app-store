@@ -7,6 +7,8 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../external/DolphinDotNet/src/DolphinDotNet.GameCube/DolphinDotNet.GameCube.csproj" />
+    <Compile Include="../../external/DolphinDotNet/samples/Common/SampleText.cs" Link="Shared/SampleText.cs" />
+    <Compile Include="../../external/DolphinDotNet/samples/DiscBrowser/BrowserNavigation.cs" Link="Shared/BrowserNavigation.cs" />
   </ItemGroup>
   <Import Project="../../external/DolphinDotNet/sdk/DolphinDotNet.Sdk/Sdk/Sdk.targets" />
 </Project>

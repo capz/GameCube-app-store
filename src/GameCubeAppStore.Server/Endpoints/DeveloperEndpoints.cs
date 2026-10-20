@@ -30,6 +30,8 @@ public static class DeveloperEndpoints
                 s.UploadedAtUtc, s.LastUpdatedAtUtc,
                 LatestVersion = s.Releases.OrderByDescending(r => r.UploadedAtUtc)
                     .FirstOrDefault()?.Version,
+                CoverUrl = s.Screenshots.OrderBy(x => x.SortOrder)
+                    .Select(x => "/api/assets/" + x.FileId).FirstOrDefault(),
                 ScreenshotCount = s.Screenshots.Count,
                 RatingCount = s.Ratings.Count,
                 AverageRating = s.Ratings.Count == 0 ? 0 : s.Ratings.Average(r => r.Stars)
@@ -45,7 +47,9 @@ public static class DeveloperEndpoints
             {
                 software.Id, software.Title, software.Description, software.Category,
                 software.IsPublished, software.UploadedAtUtc, software.LastUpdatedAtUtc,
-                Detail = PublicEndpoints.ToDetail(software)
+                Detail = PublicEndpoints.ToDetail(software),
+                ScreenshotFiles = software.Screenshots.OrderBy(s => s.SortOrder)
+                    .Select(s => new { s.Id, Url = "/api/assets/" + s.FileId }).ToArray()
             });
         });
 
@@ -53,7 +57,7 @@ public static class DeveloperEndpoints
             ClaimsPrincipal user, CancellationToken ct) =>
         {
             if (!ValidSoftware(input)) return Results.BadRequest("Title, description or category invalid.");
-            var now = DateTime.UtcNow;
+            var now = DateTimeOffset.UtcNow;
             var software = new Software
             {
                 DeveloperId = GetUserId(user), Title = input.Title.Trim(),
@@ -73,7 +77,7 @@ public static class DeveloperEndpoints
             if (software is null) return Results.NotFound();
             software.Title = input.Title.Trim(); software.Description = input.Description.Trim();
             software.Category = input.Category.Trim();
-            software.LastUpdatedAtUtc = DateTime.UtcNow;
+            software.LastUpdatedAtUtc = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
         });
@@ -85,7 +89,7 @@ public static class DeveloperEndpoints
             if (software is null) return Results.NotFound();
             if (software.Releases.Count == 0)
                 return Results.BadRequest("Upload a release before publishing.");
-            software.IsPublished = true; software.LastUpdatedAtUtc = DateTime.UtcNow;
+            software.IsPublished = true; software.LastUpdatedAtUtc = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
         });
@@ -95,7 +99,7 @@ public static class DeveloperEndpoints
         {
             var software = await OwnedSoftware(db, id, GetUserId(user), ct);
             if (software is null) return Results.NotFound();
-            software.IsPublished = false; software.LastUpdatedAtUtc = DateTime.UtcNow;
+            software.IsPublished = false; software.LastUpdatedAtUtc = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
         });
@@ -120,7 +124,7 @@ public static class DeveloperEndpoints
             catch (ArgumentException e) { return Results.BadRequest(e.Message); }
             try
             {
-                var now = DateTime.UtcNow;
+                var now = DateTimeOffset.UtcNow;
                 db.Files.Add(asset);
                 db.Releases.Add(new SoftwareRelease
                 {
@@ -157,7 +161,7 @@ public static class DeveloperEndpoints
                     SortOrder = software.Screenshots.Count == 0
                         ? 0 : software.Screenshots.Max(x => x.SortOrder) + 1
                 });
-                software.LastUpdatedAtUtc = DateTime.UtcNow;
+                software.LastUpdatedAtUtc = DateTimeOffset.UtcNow;
                 await db.SaveChangesAsync(ct);
                 return Results.Created("/api/assets/" + asset.Id,
                     new { asset.Id, url = "/api/assets/" + asset.Id });
@@ -176,7 +180,7 @@ public static class DeveloperEndpoints
             var file = await db.Files.FindAsync(new object[] { shot.FileId }, ct);
             db.Screenshots.Remove(shot);
             if (file is not null) db.Files.Remove(file);
-            software.LastUpdatedAtUtc = DateTime.UtcNow;
+            software.LastUpdatedAtUtc = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(ct);
             if (file is not null) storage.Delete(file);
             return Results.NoContent();
@@ -194,7 +198,7 @@ public static class DeveloperEndpoints
             db.Releases.Remove(release);
             if (file is not null) db.Files.Remove(file);
             if (software.Releases.Count <= 1) software.IsPublished = false;
-            software.LastUpdatedAtUtc = DateTime.UtcNow;
+            software.LastUpdatedAtUtc = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(ct);
             if (file is not null) storage.Delete(file);
             return Results.NoContent();
