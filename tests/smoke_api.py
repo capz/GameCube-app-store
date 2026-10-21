@@ -61,6 +61,11 @@ def login(email):
 
 developer = login(f"dev-{name}@example.test")
 reviewer = login(f"reviewer-{name}@example.test")
+# Rejected credentials are HTTP 401 (the portal should show a login error, not
+# claim that a session expired before one was established).
+send("/account/login?useCookies=false", "POST",
+     {"email": f"dev-{name}@example.test", "password": "Invalid_password!123"},
+     expect=401)
 _, created = send("/api/developer/software", "POST", {
     "title": "Test Software", "description": "A smoke-test download",
     "category": "Utility"

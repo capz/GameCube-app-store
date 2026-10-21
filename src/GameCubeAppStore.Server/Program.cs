@@ -28,6 +28,12 @@ builder.Services.AddIdentityApiEndpoints<DeveloperUser>(options =>
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+// The database is intentionally persistent. Log its location so developers
+// can diagnose accounts seemingly disappearing when using another working
+// directory, IDE launch configuration or Storage__Root override.
+app.Logger.LogInformation("GameCube App Store storage root: {DataRoot}", dataRoot);
+app.Logger.LogInformation("GameCube App Store Identity database: {DatabasePath}",
+    Path.Combine(dataRoot, "catalog.db"));
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseAuthentication();
