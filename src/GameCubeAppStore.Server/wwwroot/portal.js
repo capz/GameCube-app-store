@@ -54,7 +54,12 @@ async function api(path, options, retry) {
     const text = (await response.text()).slice(0,450);
     throw Error(text || 'Request failed ('+response.status+')');
   }
-  return response.status === 204 ? null : response.json();
+  // ASP.NET Core Identity registration returns 200 OK with no response body.
+  // Several other successful API endpoints return 204 No Content.
+  // Only parse JSON when a successful response actually contains a payload.
+  if (response.status === 204 || response.status === 205) return null;
+  const body = await response.text();
+  return body.trim() ? JSON.parse(body) : null;
 }
 function storeTokens(tokens) {
   state.token = tokens.accessToken || '';
