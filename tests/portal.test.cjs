@@ -104,7 +104,7 @@ test('successful empty-body registration continues to login and displays dashboa
 test('401 on login reports rejected credentials, never an expired session', async () => {
   const calls = [];
   const portal = createPortal(async (url, options) => {
-    calls.push({url, bearer:options.headers.get('Authorization')});
+    calls.push({url, bearer:new Headers(options.headers).get('Authorization')});
     return new Response(null, {status:401});
   });
   portal.request('state.token="stale-token";state.refreshToken="stale-refresh"');
@@ -131,7 +131,7 @@ test('401 from an authenticated API clears the expired session', async () => {
 test('refreshes an expired bearer token and retries an authenticated request', async () => {
   const calls = [];
   const portal = createPortal(async (url, options) => {
-    calls.push({url, bearer:options.headers.get('Authorization')});
+    calls.push({url, bearer:new Headers(options.headers).get('Authorization')});
     if (url === '/account/refresh')
       return new Response(JSON.stringify({
         accessToken:'new-token',refreshToken:'new-refresh'
