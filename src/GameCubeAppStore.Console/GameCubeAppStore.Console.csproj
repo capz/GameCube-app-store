@@ -1,0 +1,14 @@
+<Project>
+  <Import Project="../../external/DolphinDotNet/sdk/DolphinDotNet.Sdk/Sdk/Sdk.props" />
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../external/DolphinDotNet/src/DolphinDotNet.GameCube/DolphinDotNet.GameCube.csproj" />
+    <Compile Include="../../external/DolphinDotNet/samples/Common/SampleText.cs" Link="Shared/SampleText.cs" />
+    <Compile Include="../../external/DolphinDotNet/samples/DiscBrowser/BrowserNavigation.cs" Link="Shared/BrowserNavigation.cs" />
+  </ItemGroup>
+  <Import Project="../../external/DolphinDotNet/sdk/DolphinDotNet.Sdk/Sdk/Sdk.targets" />
+</Project>

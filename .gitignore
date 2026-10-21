@@ -1,0 +1,11 @@
+bin/
+obj/
+.vs/
+.idea/
+**/DolphinDotNet.local.props
+**/dolphin-user/
+data/
+*.db
+*.db-shm
+*.db-wal
+.env

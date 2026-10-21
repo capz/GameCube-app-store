@@ -1,0 +1,56 @@
+name: Build .NET 8 storefront
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-managed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore
+        run: dotnet restore GameCubeAppStore.sln
+      - name: Build managed backend and console
+        run: dotnet build GameCubeAppStore.sln -c Release --no-restore -p:DndBuildNative=false
+      - name: Validate developer portal JavaScript syntax
+        run: node --check src/GameCubeAppStore.Server/wwwroot/portal.js
+      - name: API smoke test (identity, releases, screenshots, ratings)
+        shell: bash
+        run: |
+          dotnet run --project src/GameCubeAppStore.Server -c Release --no-build --urls http://127.0.0.1:5088 > /tmp/gamecube-api.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true; cat /tmp/gamecube-api.log' EXIT
+          for i in $(seq 1 40); do
+            if curl --silent --fail http://127.0.0.1:5088/api/health >/dev/null; then break; fi
+            sleep 1
+          done
+          python3 tests/smoke_api.py http://127.0.0.1:5088
+
+  build-gamecube-dol:
+    needs: build-managed
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Native AOT GameCube build using pinned DolphinDotNet Docker backend
+        run: dotnet build src/GameCubeAppStore.Console -c Release -p:DndBuildBackend=Docker
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gamecube-app-store-dol
+          path: |
+            src/GameCubeAppStore.Console/bin/Release/net8.0/GameCubeAppStore.Console.dol
+            src/GameCubeAppStore.Console/bin/Release/net8.0/GameCubeAppStore.Console.elf
+          if-no-files-found: error
