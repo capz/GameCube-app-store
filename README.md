@@ -25,7 +25,16 @@ dotnet build src/GameCubeAppStore.Console -c Release
 ```
 
 API local development data defaults to `src/GameCubeAppStore.Server/data` (ignored by Git).
-Override using `Storage__Root`. SQLite is initialized with `EnsureCreated`
+Override using `Storage__Root`. At startup the backend logs the absolute path
+of its SQLite database (`catalog.db`). If a previously registered account
+cannot sign in, compare that path with the one from the original run; separate
+working directories or IDE launch configurations can create separate databases.
+Do not delete or overwrite an existing database when troubleshooting.
+
+An HTTP 401 from `/account/login` means the credentials were rejected; an
+HTTP 401 from `/api/developer/software` after login means the API rejected the
+issued bearer token. Both cases are distinguished in the developer portal.
+SQLite is initialized with `EnsureCreated`
 for this initial prototype; use proper EF migrations before evolving a deployed DB.
 
 ## Accounts and catalog workflow

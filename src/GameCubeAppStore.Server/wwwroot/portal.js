@@ -32,11 +32,15 @@ function message() {
 async function api(path, options, retry) {
   options = options || {};
   const headers = new Headers(options.headers || {});
-  if (state.token) headers.set('Authorization','Bearer '+state.token);
+  // Login and registration must never depend on a stale bearer token.
+  const isSignIn = path.startsWith('/account/login');
+  const isAccountRequest = isSignIn || path === '/account/register'
+    || path === '/account/refresh';
+  if (state.token && !isAccountRequest) headers.set('Authorization','Bearer '+state.token);
   if (!(options.body instanceof FormData) && options.body && !headers.has('Content-Type'))
     headers.set('Content-Type','application/json');
   const response = await fetch(path, Object.assign({}, options, {headers, cache:'no-store'}));
-  if (response.status === 401 && !retry && state.refreshToken) {
+  if (response.status === 401 && !retry && !isAccountRequest && state.refreshToken) {
     const refreshed = await fetch('/account/refresh', {
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({refreshToken:state.refreshToken})
@@ -48,13 +52,20 @@ async function api(path, options, retry) {
   }
   if (!response.ok) {
     if (response.status === 401) {
+      if (isSignIn) throw Error('Sign-in failed. Check your email and password.');
+      if (isAccountRequest) throw Error('Account request was rejected.');
       signOut(false);
       throw Error('Session expired. Sign in again.');
     }
     const text = (await response.text()).slice(0,450);
     throw Error(text || 'Request failed ('+response.status+')');
   }
-  return response.status === 204 ? null : response.json();
+  // ASP.NET Core Identity registration returns 200 OK with no response body.
+  // Several other successful API endpoints return 204 No Content.
+  // Only parse JSON when a successful response actually contains a payload.
+  if (response.status === 204 || response.status === 205) return null;
+  const body = await response.text();
+  return body.trim() ? JSON.parse(body) : null;
 }
 function storeTokens(tokens) {
   state.token = tokens.accessToken || '';
@@ -298,9 +309,19 @@ document.addEventListener('submit',async ev=>{
         await api('/account/register',{method:'POST',body:JSON.stringify({email,password})});
       }
       const auth=await api('/account/login?useCookies=false',{method:'POST',body:JSON.stringify({email,password})});
+      if (!auth || !auth.accessToken || !auth.refreshToken)
+        throw Error('Sign-in did not return a valid access token.');
       storeTokens(auth);state.email=email;sessionStorage.setItem('gc_email',email);
       state.authMode='login';state.flash='';state.page='software';
-      await refresh();
+      try {
+        await refresh();
+      } catch (error) {
+        // Distinguish a successful password login followed by a rejected
+        // API token from a password/login failure.
+        if (!state.token)
+          throw Error('Sign-in succeeded, but the developer API rejected your access token. Check server configuration and logs.');
+        throw error;
+      }
       return;
     }
     if(kind==='create'||kind==='update') {

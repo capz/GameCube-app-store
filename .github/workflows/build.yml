@@ -22,6 +22,8 @@ jobs:
         run: dotnet build GameCubeAppStore.sln -c Release --no-restore -p:DndBuildNative=false
       - name: Validate developer portal JavaScript syntax
         run: node --check src/GameCubeAppStore.Server/wwwroot/portal.js
+      - name: Test developer portal API response handling
+        run: node --test tests/portal.test.cjs
       - name: API smoke test (identity, releases, screenshots, ratings)
         shell: bash
         run: |

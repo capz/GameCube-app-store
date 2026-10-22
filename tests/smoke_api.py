@@ -48,7 +48,10 @@ def multipart(fields, filename, content, mimetype):
 name = uuid.uuid4().hex[:12]
 password = "A_long_password!12345"
 for email in (f"dev-{name}@example.test", f"reviewer-{name}@example.test"):
-    send("/account/register", "POST", {"email": email, "password": password}, expect=200)
+    _, registration = send("/account/register", "POST", {"email": email, "password": password}, expect=200)
+    # ASP.NET Identity returns HTTP 200 with no JSON body. The portal must
+    # handle this successfully before it sends the follow-up login request.
+    assert registration == b"", "Identity registration unexpectedly returned a body"
 
 def login(email):
     _, result = send("/account/login?useCookies=false", "POST",
@@ -58,6 +61,11 @@ def login(email):
 
 developer = login(f"dev-{name}@example.test")
 reviewer = login(f"reviewer-{name}@example.test")
+# Rejected credentials are HTTP 401 (the portal should show a login error, not
+# claim that a session expired before one was established).
+send("/account/login?useCookies=false", "POST",
+     {"email": f"dev-{name}@example.test", "password": "Invalid_password!123"},
+     expect=401)
 _, created = send("/api/developer/software", "POST", {
     "title": "Test Software", "description": "A smoke-test download",
     "category": "Utility"
